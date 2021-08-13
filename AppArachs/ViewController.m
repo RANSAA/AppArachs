@@ -29,6 +29,7 @@
 @property (nonatomic, strong) NSArray *whiteList;
 
 @property (nonatomic, strong) NSMutableString *mString;
+@property (nonatomic, strong) NSTextStorage *textStorage;
 
 @end
 
@@ -44,6 +45,7 @@
     NSLog(@"whiteList:%@",self.whiteList);
 
     self.mString = [[NSMutableString alloc] init];
+    self.textStorage = self.textViewInfo.textStorage;
 
 }
 
@@ -150,19 +152,17 @@
         if (returnCode == NSAlertFirstButtonReturn) {//确定
             if (handler) {
                 self.appIcns = nil;
-                if (type == 0) {
-                    self.textViewInfo.string = @"开始处理......";
-                }else if(type == 1){
-                    self.textViewInfo.string = @"开始处理......\n这是一个耗时操作请耐心等待......";
+                NSString *nodeStr = @"开始处理......\n";
+                if (type == 1) {
+                    nodeStr = @"开始处理......\n这是一个耗时操作请耐心等待......\n";
                 }
-                self.mString = [[NSMutableString alloc] initWithString:self.textViewInfo.string];
-                [self appArachsBegan];
+                [self.textStorage replaceCharactersInRange:NSMakeRange(0, self.textStorage.string.length) withString:nodeStr];
 
+                [self appArachsBegan];
                 handler();
             }
         }else if (returnCode == NSAlertSecondButtonReturn){//取消
-            self.textViewInfo.string = @"";
-            self.mString = [[NSMutableString alloc] initWithString:@""];
+            [self.textStorage replaceCharactersInRange:NSMakeRange(0, self.textStorage.string.length) withString:@""];
             [self appArachsEnd];
         }else{
 
@@ -228,25 +228,24 @@
                 [certTask launch];
 
                 //函数输出结果
-                NSString *securityResult = [[NSString alloc] initWithData:[handle readDataToEndOfFile] encoding:NSASCIIStringEncoding];
-                [self.mString appendString:securityResult];
+                NSString *shellResult = [[NSString alloc] initWithData:[handle readDataToEndOfFile] encoding:NSUTF8StringEncoding];
+                [self.mString appendString:shellResult];
                 // 回到主线程
                 [[NSOperationQueue mainQueue] addOperationWithBlock:^{
-                    // 进行一些 UI 刷新等操作
-                    self.textViewInfo.string = self.mString;
-                    [self.textViewInfo scrollRangeToVisible: NSMakeRange(self.mString.length, 0)];
+                    [self.textStorage appendAttributedString:[[NSAttributedString alloc]initWithString:shellResult]];
+                    [self.textViewInfo scrollRangeToVisible: NSMakeRange(self.textStorage.string.length, 0)];
                 }];
             }];
         }
 
         [queue waitUntilAllOperationsAreFinished];
+//        [queue cancelAllOperations];
 
         dispatch_async(dispatch_get_main_queue(), ^{
-            [self.mString appendString:@"\n✅处理完成！"];
-            self.textViewInfo.string = self.mString;
-            [self.textViewInfo scrollRangeToVisible: NSMakeRange(self.mString.length, 0)];
-            NSLog(@"mString:%@",self.mString);
+            [self.textStorage appendAttributedString:[[NSAttributedString alloc]initWithString:@"\n✅处理完成!!!"]];
+            [self.textViewInfo scrollRangeToVisible: NSMakeRange(self.textStorage.string.length, 0)];
         });
+
 
         //执行完成后，恢复按钮状态
         [self appArachsEnd];
@@ -374,14 +373,11 @@
                         NSArray *ary = [self archsWith:itemPath];
                         if (ary.count > 0) {
                             [resultAry addObjectsFromArray:ary];
-
-
-                            [self.mString appendString:[NSString stringWithFormat:@"%@",ary]];
+                            NSString *nodeStr = [NSString stringWithFormat:@"%@",ary];
                             // 回到主线程
                             [[NSOperationQueue mainQueue] addOperationWithBlock:^{
-                                // 进行一些 UI 刷新等操作
-                                self.textViewInfo.string = self.mString;
-                                [self.textViewInfo scrollRangeToVisible: NSMakeRange(self.mString.length, 0)];
+                                [self.textStorage appendAttributedString:[[NSAttributedString alloc]initWithString:nodeStr]];
+                                [self.textViewInfo scrollRangeToVisible: NSMakeRange(self.textStorage.string.length, 0)];
                             }];
                         }
                     }
